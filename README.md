@@ -1,0 +1,2 @@
+# hexchat
+Hexchat Addons
