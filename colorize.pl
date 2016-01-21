@@ -32,11 +32,8 @@ sub colorize {
 
 	my @msg = @{$_[0]};
 	my $event = $_[1];
-	my $t = \&text_color_of(HexChat::strip_code(@msg));
-
-	#$t =~ s/(.)/"\cC" . (int(rand(14))+2) . "$1"/eg;
-
-	HexChat::printf("\cC%s%s", $t, @msg);
+	
+	$msg[0] = &text_color_of(@msg);
 	emit_print($event, @msg) unless $exit;
 
 	return EAT_ALL;
@@ -44,14 +41,6 @@ sub colorize {
 
 sub text_color_of {
 	my @rcolors = ( 19, 20, 22, 24, 25, 26, 27, 28, 29 );
-	my $i = 0; 
-	my $sum = 0;
-
-	while ($_) {
-		$sum += $_[$i++];
-	}
-
-	HexChat::printf("%s %s %s", $_, $i, $sum);
-	$sum %= $#rcolors / 2;
-	return $rcolors[$sum];
+	my $r = @rcolors[rand($#rcolors)];
+	return sprintf("\cC%s%s", $r, HexChat::strip_code($_[0]))
 }
