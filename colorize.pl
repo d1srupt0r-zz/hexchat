@@ -1,64 +1,84 @@
 use strict;
 use warnings;
-use HexChat qw(:all);
+#use HexChat qw(:all);
 
+# script registration
 my $name = "colorize";
 my $version = "0.1";
+HexChat::register($name, $version, "colorize nicks");
+HexChat::printf("Loading \002%s\017 version %s", &rainbow($name), $version);
 
-register($name, $version, "colorize nicks");
-HexChat::printf("Loading %s version %s", $name, $version);
-
-my @events = (
-	"Channel Message",
-	"Channel Action",
-	"Channel Msg Hilight",
-	"Channel Action Hilight",
-	"Your Message",
-	"Your Action"
+# channel hooks
+my @cevents = (
+	"Channel Message", "Channel Action", "Channel Msg Hilight", "Channel Action Hilight",
+	"Your Message", "Your Action"
 );
-
-sub on_unload {
-	HexChat::printf("%s version %s unloaded", $name, $version);
+for my $event (@cevents) { 
+	HexChat::hook_print($event, \&colorize, { data => $event }); 
 }
+# server hooks
+HexChat::hook_server("PRIVMSG", \&privmsg);
+# command hooks
+HexChat::hook_command("colorz", \&colorz, { help_text => "Usage: /colorz to show a list of available colors."});
 
-for my $event (@events) {
-	hook_print($event, \&colorize, { data => $event, priority => PRI_HIGH});
-}
-
-my @rcolors = ( 19, 20, 22, 24, 25, 26, 27, 28, 29 );
+# variables
 my $exit;
+my $color;
+my @rcolors = ( 19, 20, 22, 24, 25, 26, 27, 28, 29 );
 
-hook_command("colorz", \&colorz, { help_text => "Usage: /colorz to show a list of available colors."});
+# text codes
+# 002:bold
+# 003:color
+# 010:hidden
+# 037:underline
+# 017:original
+# 026:reverse color
+# 007:beep
+# 035:italics
 
+# commands
 sub colorz {
-	for my $color (@rcolors) {
-		HexChat::printf("\cC%d%s", $color, $color);
+	for my $color (@rcolors) { 
+		HexChat::printf("\003%d%s", $color, $color); 
 	}
-	return EAT_ALL;
+	return HexChat::EAT_ALL;
 }
-
-sub colorize {
+# server events
+sub privmsg {
 	$exit = 0;
-
-	my @msg = @{$_[0]};
-	my $event = $_[1];
-	my $nick = HexChat::strip_code($msg[0]);
-	my $num = &text_color_of($nick);
-
-	#HexChat::printf("\cC%d%d | %s", $num, $num, $event);
-	my $custom = $msg[2] 
-		? sprintf("\cC%d%s\cC%d%s", 0, $msg[2], $num, $nick)
-		: sprintf("\cC%d%s", $num, $nick);
-
-	HexChat::emit_print($event, $custom, $msg[1]) unless $exit;
-	return EAT_ALL;
+	my @raw = @{$_[0]};
+	my $msg;
+	#for (my $i = 3; $i < $#raw; $i++) {
+	#	$msg = $msg.join(" ", $raw[$i]);
+	#}
+	HexChat::printf("\0030%s", $msg);
+	return HexChat::EAT_NONE;
 }
-
+# channel events
 sub text_color_of {
 	my $sum = 0;
-	for my $byte (split //, $_[0]) {
-		$sum += ord($byte);
+	for my $byte (split //, $_[0]) { 
+		$sum += ord($byte); 
 	}
 	$sum %= $#rcolors / 2;
-	return $rcolors[rand($sum)];
+	return $rcolors[$sum];
 }
+sub colorize {
+	$exit = 0;
+	my @msg = @{$_[0]};
+	my $nick = HexChat::strip_code($msg[0]);
+	my $num = &text_color_of($nick);
+	my $custom = $msg[2] 
+		? sprintf("\0030%s\003%d%s", $msg[2], $num, $nick)
+		: sprintf("\003%d%s", $num, $nick);
+	HexChat::printf("\003%d%d", $num, $num);
+	HexChat::emit_print($_[1], $custom, $msg[1]) unless $exit;
+	return HexChat::EAT_ALL;
+}
+#misc
+sub rainbow {
+	my $text = $_[0];
+	$text =~ s/(.)/"\cC" . (int(rand(14))+2) . "$1"/eg;
+	return $text;
+}
+__END__
