@@ -17,7 +17,10 @@ for my $event (@cevents) {
 	HexChat::hook_print($event, \&colorize, { data => $event }); 
 }
 # server hooks
-HexChat::hook_server("PRIVMSG", \&privmsg);
+my @sevents = ("PRIVMSG");
+for my $event (@sevents) {
+	HexChat::hook_server($event, \&privmsg);
+}
 # command hooks
 HexChat::hook_command("colorz", \&colorz, { help_text => "Usage: /colorz to show a list of available colors."});
 
@@ -45,13 +48,11 @@ sub colorz {
 }
 # server events
 sub privmsg {
-	$exit = 0;
-	my @raw = @{$_[0]};
-	my $msg;
+	my @msg = @{$_[1]};
 	#for (my $i = 3; $i < $#raw; $i++) {
 	#	$msg = $msg.join(" ", $raw[$i]);
 	#}
-	HexChat::printf("\0030%s", $msg);
+	#HexChat::printf("\0030%s", $msg[1]);
 	return HexChat::EAT_NONE;
 }
 # channel events
@@ -71,7 +72,7 @@ sub colorize {
 	my $custom = $msg[2] 
 		? sprintf("\0030%s\003%d%s", $msg[2], $num, $nick)
 		: sprintf("\003%d%s", $num, $nick);
-	HexChat::printf("\003%d%d", $num, $num);
+	#HexChat::printf("\003%d%d", $num, $num);
 	HexChat::emit_print($_[1], $custom, $msg[1]) unless $exit;
 	return HexChat::EAT_ALL;
 }
